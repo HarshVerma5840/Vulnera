@@ -1,6 +1,20 @@
 import time
+from datetime import datetime
 from zapv2 import ZAPv2
 from requests.exceptions import RequestException
+
+EXCLUSION_REGEXES = [
+    # Static Assets (Stylesheets, Fonts, Images, Media, Maps)
+    r".*\.css$", r".*\.scss$", r".*\.less$",
+    r".*\.woff$", r".*\.woff2$", r".*\.ttf$", r".*\.eot$", r".*\.otf$",
+    r".*\.png$", r".*\.jpg$", r".*\.jpeg$", r".*\.gif$", r".*\.svg$", r".*\.ico$", r".*\.webp$", r".*\.bmp$",
+    r".*\.mp4$", r".*\.mp3$", r".*\.wav$", r".*\.webm$", r".*\.avi$",
+    r".*\.js\.map$", r".*\.css\.map$",
+    # Directories (Client-side dependencies)
+    r".*/node_modules/.*", r".*/vendor/.*", r".*/bower_components/.*", r".*/\.venv/.*",
+    # Third-party Domains
+    r".*\.google-analytics\.com.*", r".*\.googletagmanager\.com.*", r".*\.facebook\.net.*", r".*\.hotjar\.com.*", r".*\.stripe\.com.*"
+]
 
 class ZAPScanManager:
     def __init__(self, target, api_key="", zap_host="127.0.0.1", zap_port="8080"):
@@ -23,6 +37,16 @@ class ZAPScanManager:
             print(f"[-] Failed to connect to ZAP proxy: {e}")
             print(f"[-] Please ensure ZAP is running on {zap_host}:{zap_port}")
             raise SystemExit(1)
+
+    def _configure_exclusions(self):
+        print("[*] Configuring ZAP scan exclusions...")
+        for regex in EXCLUSION_REGEXES:
+            try:
+                self.zap.spider.exclude_from_scan(regex)
+                self.zap.ascan.exclude_from_scan(regex)
+            except Exception as e:
+                print(f"[-] Failed to apply exclusion regex {regex}: {e}")
+
 
     # 1. Spider crawl
     def spider(self):
@@ -93,6 +117,10 @@ class ZAPScanManager:
     # 6. Full pipeline
     def run_full_scan(self):
         print(f"[*] Target: {self.target}")
+        start_time = datetime.now()
+
+        # Configure exclusions before starting the scan
+        self._configure_exclusions()
 
         # spider
         self.spider()
@@ -111,7 +139,13 @@ class ZAPScanManager:
             alerts = self.get_alerts()
             critical = self.get_critical_alerts(alerts)
 
+        end_time = datetime.now()
+        duration_seconds = int((end_time - start_time).total_seconds())
+
         return {
+            "scan_start_time": start_time.isoformat(),
+            "scan_end_time": end_time.isoformat(),
+            "scan_duration_seconds": duration_seconds,
             "total_alerts": len(alerts),
             "critical_alerts": len(critical),
             "alerts": alerts,
