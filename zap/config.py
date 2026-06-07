@@ -1,0 +1,12 @@
+import os
+
+# ZAP API Settings
+ZAP_API_KEY = os.getenv("ZAP_API_KEY", "u3n0kh8j5ic9h7qkenhirl3dgp")
+ZAP_HOST = os.getenv("ZAP_HOST", "127.0.0.1")
+ZAP_PORT = os.getenv("ZAP_PORT", "8090")
+
+# Target Application Settings
+TARGET_URL = os.getenv("TARGET_URL", "http://demo.testfire.net")
+
+# Reporting Settings
+REPORT_PATH = os.getenv("REPORT_PATH", "zap_report.json")
