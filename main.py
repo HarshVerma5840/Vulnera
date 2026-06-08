@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 import database_models
@@ -8,6 +7,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import uuid
 import json
+from nmap import scan_host
 
 app = FastAPI(title="Vulnera", version="1.0.0")
 
@@ -25,6 +25,15 @@ def greet():
 # ============================================================================
 # NMAP ENDPOINTS
 # ============================================================================
+
+@app.get("/api/test-nmap")
+def test_nmap():
+    results = scan_host("scanme.nmap.org")
+    return {
+        "status": "success",
+        "results": results
+    }
+
 
 # 1. START A NEW SCAN
 @app.post("/api/scans", response_model=dict)
@@ -351,6 +360,14 @@ def export_results_csv(scan_id: str, db: Session = Depends(get_db)):
         headers={"Content-Disposition": f"attachment; filename=scan_{scan_id}.csv"}
     )
 
+@app.get("/api/test-nmap")
+def test_nmap():
+    results = scan_host("scanme.nmap.org")
+    return {
+        "status": "success",
+        "results": results
+    }
+    
 # ============================================================================
 # ZAP ENDPOINTS (Keep as is for now)
 # ============================================================================
