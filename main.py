@@ -360,14 +360,6 @@ def export_results_csv(scan_id: str, db: Session = Depends(get_db)):
         headers={"Content-Disposition": f"attachment; filename=scan_{scan_id}.csv"}
     )
 
-@app.get("/api/test-nmap")
-def test_nmap():
-    results = scan_host("scanme.nmap.org")
-    return {
-        "status": "success",
-        "results": results
-    }
-    
 # ============================================================================
 # ZAP ENDPOINTS (Keep as is for now)
 # ============================================================================
