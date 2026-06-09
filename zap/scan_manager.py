@@ -1,6 +1,6 @@
 import json
 import os
-from config import TARGET_URL, ZAP_API_KEY, ZAP_HOST, ZAP_PORT, REPORT_PATH
+from config import TARGET_URL, ZAP_API_KEY, ZAP_HOST, ZAP_PORT, REPORT_PATH, SCAN_MODE
 from scanner import ZAPScanManager
 
 def main():
@@ -11,7 +11,7 @@ def main():
         zap_port=ZAP_PORT
     )
 
-    results = scanner.run_full_scan()
+    results = scanner.run_full_scan(mode=SCAN_MODE)
 
     # Ensure the directory exists if a path is specified
     report_dir = os.path.dirname(REPORT_PATH)

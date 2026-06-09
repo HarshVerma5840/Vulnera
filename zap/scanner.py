@@ -1,3 +1,4 @@
+import requests
 import time
 from datetime import datetime
 from zapv2 import ZAPv2
@@ -77,6 +78,65 @@ class ZAPScanManager:
             print(f"[-] Failed to configure scan policy: {e}")
 
 
+    def _configure_spider(self, mode="full"):
+        """Tunes the spider to prevent infinite crawling on large applications."""
+        print(f"[*] Configuring Spider settings for '{mode}' mode...")
+        try:
+            # Quick mode gets a shallow crawl, Full mode gets standard depth
+            depth = 3 if mode == "quick" else 5
+            self.zap.spider.set_option_max_depth(depth)
+            self.zap.spider.set_option_max_children(20)
+            self.zap.spider.set_option_thread_count(7)
+            print(f"[+] Spider tuned: max_depth={depth}, max_children=20, threads=7")
+        except Exception as e:
+            print(f"[-] Failed to configure spider: {e}")
+
+    
+    def _apply_quick_scan_plugins(self):
+        """Disables all but the most critical active scan plugins for speed."""
+        print("[*] Applying Quick Scan policy (High-Value plugins only)...")
+        # Top critical plugins (SQLi, XSS, CMDi, Path Traversal, XXE, etc.)
+        HIGH_VALUE_PLUGINS = "40012,40018,90020,90019,40014,40016,40017,90021,90023,90024"
+        
+        try:
+            # Disable everything first, then selectively enable the heavy hitters
+            self.zap.ascan.disable_all_scanners(scanpolicyname=SCAN_POLICY_NAME)
+            self.zap.ascan.enable_scanners(ids=HIGH_VALUE_PLUGINS, scanpolicyname=SCAN_POLICY_NAME)
+            print("[+] Quick scan policy applied: Only core injection attacks enabled.")
+        except Exception as e:
+            print(f"[-] Failed to configure quick scan policy: {e}")
+
+    def _deduplicate_alerts(self, alerts):
+        """Groups duplicate alerts to shrink the report size and improve readability."""
+        print("[*] Deduplicating alerts for report generation...")
+        grouped = {}
+        
+        for alert in alerts:
+            # Use pluginId, name, and risk to form a unique grouping key
+            key = (alert.get("pluginId", ""), alert.get("name", ""), alert.get("risk", ""))
+            
+            if key not in grouped:
+                grouped[key] = {
+                    "name": alert.get("name"),
+                    "risk": alert.get("risk"),
+                    "pluginId": alert.get("pluginId"),
+                    "description": alert.get("description"),
+                    "solution": alert.get("solution"),
+                    "reference": alert.get("reference"),
+                    "tags": alert.get("tags"),
+                    "occurrence_count": 0,
+                    "affected_urls": []
+                }
+            
+            # Increment count and add unique URLs
+            grouped[key]["occurrence_count"] += 1
+            url = alert.get("url")
+            if url and url not in grouped[key]["affected_urls"]:
+                grouped[key]["affected_urls"].append(url)
+        
+        print(f"[+] Compressed {len(alerts)} raw alerts into {len(grouped)} grouped alerts")
+        return list(grouped.values())
+
     # 1. Spider crawl
     def spider(self):
         print("[*] Starting spider...")
@@ -145,40 +205,98 @@ class ZAPScanManager:
             except Exception as e:
                 print(f"[-] Deep rescan monitoring failed for {url}: {e}")
 
-    # 6. Full pipeline
-    def run_full_scan(self):
-        print(f"[*] Target: {self.target}")
+
+    def _detect_and_exclude_technologies(self):
+        """Infers the tech stack from HTTP headers to skip irrelevant active scan attacks."""
+        print("[*] Detecting target technology stack...")
+        try:
+            # Fetch a sample response to inspect headers
+            response = requests.get(self.target, timeout=10, verify=False)
+            server_header = response.headers.get("Server", "").lower()
+            x_powered = response.headers.get("X-Powered-By", "").lower()
+            
+            headers_combined = f"{server_header} {x_powered}"
+            print(f"    Headers found: Server='{server_header}', X-Powered-By='{x_powered}'")
+
+            # ZAP's internal technology node names
+            exclude_tech = []
+
+            # Heuristics: If we don't see evidence of a tech, we exclude it
+            if "php" not in headers_combined:
+                exclude_tech.append("Language.PHP")
+            
+            if "asp" not in headers_combined and "iis" not in headers_combined:
+                exclude_tech.append("Language.ASP")
+                
+            if "java" not in headers_combined and "tomcat" not in headers_combined and "coyote" not in headers_combined and "jsp" not in headers_combined:
+                exclude_tech.extend(["Language.JSP/Servlet", "Language.Java"])
+                
+            if "python" not in headers_combined and "wsgi" not in headers_combined:
+                exclude_tech.append("Language.Python")
+
+            if exclude_tech:
+                print(f"[*] Excluding irrelevant technologies: {', '.join(exclude_tech)}")
+                # Apply exclusions to the Default Context
+                self.zap.context.exclude_context_technologies(
+                    contextname="Default Context", 
+                    technologylist=",".join(exclude_tech)
+                )
+                print("[+] Technologies excluded successfully")
+            else:
+                print("[*] Could not reliably narrow down tech stack. Scanning all technologies.")
+
+        except Exception as e:
+            print(f"[-] Technology detection failed (ignoring and proceeding): {e}")
+
+   # 6. Full pipeline
+    def run_full_scan(self, mode="full"):
+        print(f"[*] Target: {self.target} | Mode: {mode.upper()}")
         start_time = datetime.now()
 
-        # Configure exclusions and scan policy before starting
+        # Configure baseline rules
         self._configure_exclusions()
         self._configure_scan_policy()
+        
+        # Apply Quick Mode constraints if requested
+        if mode == "quick":
+            self._apply_quick_scan_plugins()
 
-        # spider
+        self._configure_spider(mode=mode)
+
+        # 1. Spider
         self.spider()
 
-        # active scan
+        # 2. Tech Exclusions (Chunk 5)
+        self._detect_and_exclude_technologies()
+
+        # 3. Active Scan
         self.active_scan()
 
-        # alerts
+        # 4. Alerts & Deep Rescan
         alerts = self.get_alerts()
-
         critical = self.get_critical_alerts(alerts)
 
-        if critical:
+        # Only run deep rescan in full mode
+        if critical and mode == "full":
             self.deep_rescan(critical)
-            # Re-fetch alerts after deep rescan to include new findings
             alerts = self.get_alerts()
             critical = self.get_critical_alerts(alerts)
+        elif critical and mode == "quick":
+            print("[*] Skipping Deep Rescan (Quick Mode active)")
 
         end_time = datetime.now()
         duration_seconds = int((end_time - start_time).total_seconds())
 
+        grouped_alerts = self._deduplicate_alerts(alerts)
+
         return {
+            "scan_mode": mode,
             "scan_start_time": start_time.isoformat(),
             "scan_end_time": end_time.isoformat(),
             "scan_duration_seconds": duration_seconds,
-            "total_alerts": len(alerts),
-            "critical_alerts": len(critical),
-            "alerts": alerts,
+            "total_raw_alerts": len(alerts),
+            "total_grouped_alerts": len(grouped_alerts),
+            "critical_raw_alerts": len(critical),
+            "grouped_alerts": grouped_alerts,
+            "raw_alerts": alerts, 
         }

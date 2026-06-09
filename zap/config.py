@@ -10,3 +10,7 @@ TARGET_URL = os.getenv("TARGET_URL", "http://demo.testfire.net")
 
 # Reporting Settings
 REPORT_PATH = os.getenv("REPORT_PATH", "zap_report.json")
+
+# --- NEW ---
+# Scan Mode Settings
+SCAN_MODE = os.getenv("SCAN_MODE", "quick") # "quick" or "full"
