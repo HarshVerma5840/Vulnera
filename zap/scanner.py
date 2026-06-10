@@ -26,8 +26,9 @@ DISABLED_PLUGINS = [
 SCAN_POLICY_NAME = "vulnera_optimized"
 
 class ZAPScanManager:
-    def __init__(self, target, api_key="", zap_host="127.0.0.1", zap_port="8080"):
+    def __init__(self, target, api_key="", zap_host="127.0.0.1", zap_port="8080", nmap_fingerprint=""):
         self.target = target
+        self.nmap_fingerprint = nmap_fingerprint.lower()
 
         self.zap = ZAPv2(
             apikey=api_key,
@@ -214,8 +215,10 @@ class ZAPScanManager:
             server_header = response.headers.get("Server", "").lower()
             x_powered = response.headers.get("X-Powered-By", "").lower()
             
-            headers_combined = f"{server_header} {x_powered}"
+            headers_combined = f"{server_header} {x_powered} {self.nmap_fingerprint}"
             print(f"    Headers found: Server='{server_header}', X-Powered-By='{x_powered}'")
+            if self.nmap_fingerprint:
+                print(f"    Nmap Fingerprint provided: '{self.nmap_fingerprint}'")
 
             # ZAP's internal technology node names
             exclude_tech = []
@@ -238,7 +241,7 @@ class ZAPScanManager:
                 # Apply exclusions to the Default Context
                 self.zap.context.exclude_context_technologies(
                     contextname="Default Context", 
-                    technologylist=",".join(exclude_tech)
+                    technologynames=",".join(exclude_tech)
                 )
                 print("[+] Technologies excluded successfully")
             else:

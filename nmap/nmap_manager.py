@@ -66,8 +66,7 @@ def scan_host(target):
     target = clean_target(target)
     scanner.scan(
         target,
-        ports="21,22,23,25,53,80,110,143,443,445,3306,3389,8080",
-        arguments="-sV"
+        arguments="-T4 --top-ports 1000 -sV"
     )
     results = []
 
