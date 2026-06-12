@@ -26,8 +26,16 @@ DISABLED_PLUGINS = [
 SCAN_POLICY_NAME = "vulnera_optimized"
 
 class ZAPScanManager:
-    def __init__(self, target, api_key="", zap_host="127.0.0.1", zap_port="8080", nmap_fingerprint=""):
+    def __init__(
+    self,
+    target,
+    endpoints=None,
+    api_key="",
+    zap_host="127.0.0.1",
+    zap_port="8080",
+    nmap_fingerprint=""):
         self.target = target
+        self.endpoints = endpoints or []
         self.nmap_fingerprint = nmap_fingerprint.lower()
 
         self.zap = ZAPv2(
@@ -137,6 +145,28 @@ class ZAPScanManager:
         
         print(f"[+] Compressed {len(alerts)} raw alerts into {len(grouped)} grouped alerts")
         return list(grouped.values())
+
+    def add_endpoints_to_scope(self):
+
+        if not self.endpoints:
+            print("[*] No endpoints provided")
+            return
+
+        print("[*] Adding endpoints to ZAP scope")
+
+        for endpoint in self.endpoints:
+
+            if endpoint.startswith("http"):
+                url = endpoint
+            else:
+                url = self.target.rstrip("/") + "/" + endpoint.lstrip("/")
+
+            try:
+                self.zap.core.access_url(url)
+                print(f"[+] Added scope: {url}")
+
+            except Exception as e:
+                print(f"[-] Failed adding {url}: {e}")
 
     # 1. Spider crawl
     def spider(self):
@@ -264,6 +294,9 @@ class ZAPScanManager:
             self._apply_quick_scan_plugins()
 
         self._configure_spider(mode=mode)
+
+        # Add selected endpoints before spider crawl
+        self.add_endpoints_to_scope()
 
         # 1. Spider
         self.spider()
