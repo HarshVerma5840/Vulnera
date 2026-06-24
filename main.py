@@ -38,7 +38,7 @@ vulnerascan_status = {}
 
 @app.post("/api/vulnerascan", response_model=dict)
 def start_vulnerascan(
-    target: str = "demo.testfire.net",
+    target: str = "juice-shop.herokuapp.com",
     zap_mode: str = "quick",
     db: Session = Depends(get_db)
 ):

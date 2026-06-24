@@ -6,7 +6,7 @@ ZAP_HOST = os.getenv("ZAP_HOST", "127.0.0.1")
 ZAP_PORT = os.getenv("ZAP_PORT", "8090")
 
 # Target Application Settings
-TARGET_URL = os.getenv("TARGET_URL", "http://demo.testfire.net")
+TARGET_URL = os.getenv("TARGET_URL", "https://juice-shop.herokuapp.com")
 
 # Reporting Settings
 REPORT_PATH = os.getenv("REPORT_PATH", "zap_report.json")
