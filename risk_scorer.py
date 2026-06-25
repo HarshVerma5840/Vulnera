@@ -295,3 +295,17 @@ class RiskScorer:
             amplifications[alert_id] = factor
 
         return amplifications
+
+    def score_all(self, alerts: list, endpoint_scores: dict, amplifications: dict) -> list:
+        """
+        Compute risk scores for a list of unified alerts and update them in place.
+        """
+        for alert in alerts:
+            alert_id = alert.get("alert_id", "")
+            ep_score = endpoint_scores.get(alert_id, 0.5)
+            amp = amplifications.get(alert_id, 1.0)
+            
+            score_data = self.score_alert(alert, endpoint_score=ep_score, amplification=amp)
+            alert.update(score_data)
+            
+        return alerts

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 import threading
@@ -10,6 +10,21 @@ from supabase import create_client, Client
 
 from database import session
 from database_models import VulneraScan
+
+# Intelligence layer imports (Phase 0-3)
+from normaliser import normalise_all
+from endpoint_scorer import EndpointScorer
+from risk_scorer import RiskScorer
+from cwe_lookup import CWELookup
+
+# Initialise intelligence components
+endpoint_scorer = EndpointScorer()
+risk_scorer = RiskScorer()
+cwe_lookup = CWELookup()
+
+# Report generator
+from report_generator import ReportGenerator
+report_generator = ReportGenerator()
 
 app = FastAPI(title="Vulnera", version="1.0.0")
 
@@ -38,8 +53,9 @@ vulnerascan_status = {}
 
 @app.post("/api/vulnerascan", response_model=dict)
 def start_vulnerascan(
-    target: str = "juice-shop.herokuapp.com",
+    target: str = "demo.testfire.net",
     zap_mode: str = "quick",
+    app_type: str = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -55,6 +71,7 @@ def start_vulnerascan(
         "scan_id": scan_id,
         "target": target,
         "zap_mode": zap_mode,
+        "app_type": app_type,
         "status": "starting",
         "current_action": "Initializing",
         "started_at": datetime.utcnow().isoformat(),
@@ -197,6 +214,69 @@ def start_vulnerascan(
             zap_duration = time.time() - zap_start
             vulnerascan_status[scan_id]["results"]["timing"]["zap_duration_seconds"] = round(zap_duration, 2)
             
+            # ============================================================
+            # INTELLIGENCE LAYER — Normalise, Score, Enrich
+            # ============================================================
+            
+            vulnerascan_status[scan_id]["status"] = "enriching"
+            vulnerascan_status[scan_id]["current_action"] = "Running AI intelligence analysis..."
+            
+            db_bg.query(VulneraScan).filter(VulneraScan.scan_id == scan_id).update({
+                "status": "enriching",
+                "current_action": "Running AI intelligence analysis..."
+            })
+            db_bg.commit()
+            
+            # Collect all raw alerts from all ZAP reports
+            all_raw_zap_alerts = []
+            for zap_report in vulnerascan_status[scan_id]["results"]["zap_reports"]:
+                if zap_report.get("success") and zap_report.get("data"):
+                    all_raw_zap_alerts.extend(
+                        zap_report["data"].get("raw_alerts", [])
+                    )
+            
+            # Step 1: Normalise
+            print("[*] Step 1/5: Normalising alerts...")
+            nmap_data = vulnerascan_status[scan_id]["results"]["nmap_results"] or []
+            unified_alerts = normalise_all(all_raw_zap_alerts, nmap_data)
+            print(f"[+] Normalised {len(unified_alerts)} alerts")
+            
+            # Step 2: Endpoint scoring
+            print("[*] Step 2/5: Scoring endpoint sensitivity...")
+            endpoint_scores = {}
+            for alert in unified_alerts:
+                result = endpoint_scorer.score_endpoint(
+                    alert.get("path", "/"),
+                    app_type=app_type
+                )
+                endpoint_scores[alert["alert_id"]] = result["score"]
+                
+            # Step 3: Cross-tool amplification
+            print("[*] Step 3/5: Computing cross-tool amplification...")
+            amplifications = risk_scorer.compute_all_amplifications(
+                unified_alerts, nmap_data
+            )
+            
+            # Step 4: Risk scoring (CVSS + EPSS + composite)
+            print("[*] Step 4/5: Computing risk scores (calling NVD/EPSS APIs)...")
+            vulnerascan_status[scan_id]["current_action"] = "Fetching CVSS/EPSS data from NVD and FIRST.org..."
+            scored_alerts = risk_scorer.score_all(
+                unified_alerts, endpoint_scores, amplifications
+            )
+            
+            # Step 5: CWE plain-English enrichment
+            print("[*] Step 5/5: Adding plain-English explanations...")
+            for alert in scored_alerts:
+                cwe_id = alert.get("cwe_id")
+                if cwe_id:
+                    cwe_info = cwe_lookup.get_plain_english(cwe_id)
+                    alert["plain_english"] = cwe_info
+                else:
+                    alert["plain_english"] = cwe_lookup.get_plain_english(None)
+                    
+            # Attach to final report
+            vulnerascan_status[scan_id]["results"]["alerts"] = scored_alerts
+
             total_duration = time.time() - scan_start_time
             total_duration_rounded = round(total_duration, 2)
             vulnerascan_status[scan_id]["results"]["timing"]["total_duration_seconds"] = total_duration_rounded
@@ -333,3 +413,47 @@ def get_vulnerascan_results(scan_id: str, db: Session = Depends(get_db)):
         return JSONResponse(content=report_data)
         
     raise HTTPException(status_code=404, detail="Report file not found in Supabase bucket or local backup.")
+
+@app.get("/api/vulnerascan/{scan_id}/report")
+def get_vulnerascan_pdf_report(scan_id: str, db: Session = Depends(get_db)):
+    """
+    Generate and download a branded PDF security report for a completed scan.
+    """
+    db_scan = db.query(VulneraScan).filter(VulneraScan.scan_id == scan_id).first()
+
+    if not db_scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+
+    if db_scan.status != "complete":
+        raise HTTPException(status_code=400, detail=f"Scan is not complete. Current status: {db_scan.status}")
+
+    # Check if we have in-memory data with alerts
+    scan_data = None
+    if scan_id in vulnerascan_status:
+        scan_data = vulnerascan_status[scan_id]
+
+    # Fallback: load from local JSON report
+    if not scan_data or "alerts" not in scan_data.get("results", {}):
+        local_path = os.path.join("zap", f"{scan_id}_combined_report.json")
+        if os.path.exists(local_path):
+            with open(local_path, "r") as f:
+                results = json.load(f)
+            scan_data = {
+                "scan_id": scan_id,
+                "target": db_scan.target,
+                "app_type": getattr(db_scan, "app_type", None),
+                "results": results,
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Scan data not found. Cannot generate report.")
+
+    # Generate PDF
+    os.makedirs("reports", exist_ok=True)
+    pdf_path = os.path.join("reports", f"{scan_id}_report.pdf")
+    report_generator.generate_report(scan_data, output_path=pdf_path)
+
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename=f"vulnera_{scan_id}_report.pdf"
+    )
