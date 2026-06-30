@@ -1,0 +1,130 @@
+{
+    "CWE-79": {
+        "title": "Cross-Site Scripting (XSS)",
+        "plain_english": "An attacker can inject malicious scripts into web pages that other users view. When someone visits the affected page, the script runs in their browser as if it came from your trusted website.",
+        "impact": "Attackers can steal user session cookies (hijacking accounts), redirect users to malicious sites, deface your website, or steal sensitive data entered into forms.",
+        "fix": "Validate and sanitise all user input. Use output encoding (HTML entity encoding) when displaying user-provided data. Implement Content Security Policy (CSP) headers.",
+        "severity_context": "HIGH",
+        "owasp_category": "A03:2021 - Injection"
+    },
+    "CWE-89": {
+        "title": "SQL Injection",
+        "plain_english": "An attacker can insert malicious database commands through your application's input fields. This can let them read, modify, or delete your entire database.",
+        "impact": "Complete database compromise. Attackers can steal all user data, passwords, financial records. They may also modify or delete data, or use the database server to attack other systems.",
+        "fix": "Use parameterised queries (prepared statements) instead of string concatenation. Never build SQL queries by inserting user input directly. Use an ORM like SQLAlchemy.",
+        "severity_context": "CRITICAL",
+        "owasp_category": "A03:2021 - Injection"
+    },
+    "CWE-22": {
+        "title": "Path Traversal",
+        "plain_english": "An attacker can manipulate file paths to access files outside the intended directory. By using sequences like '../', they can read sensitive system files or application configuration.",
+        "impact": "Exposure of sensitive files including configuration files with database passwords, application source code, or system files like /etc/passwd.",
+        "fix": "Validate and sanitise all file paths. Use a whitelist of allowed files/directories. Resolve paths canonically and verify they remain within the expected directory.",
+        "severity_context": "HIGH",
+        "owasp_category": "A01:2021 - Broken Access Control"
+    },
+    "CWE-352": {
+        "title": "Cross-Site Request Forgery (CSRF)",
+        "plain_english": "An attacker can trick a logged-in user into performing actions they didn't intend — like changing their password or making a purchase — by getting them to click a malicious link.",
+        "impact": "Unauthorised actions performed on behalf of authenticated users. This could include fund transfers, email address changes, or administrative actions.",
+        "fix": "Implement anti-CSRF tokens in all forms. Use the SameSite cookie attribute. Verify the Origin and Referer headers on state-changing requests.",
+        "severity_context": "MEDIUM",
+        "owasp_category": "A01:2021 - Broken Access Control"
+    },
+    "CWE-200": {
+        "title": "Information Exposure",
+        "plain_english": "Your application is revealing sensitive information that could help an attacker. This could be error messages showing database details, server version numbers, or internal file paths.",
+        "impact": "Attackers gain knowledge about your system's architecture, software versions, and internal structure — making it easier to find and exploit other vulnerabilities.",
+        "fix": "Use generic error messages in production. Remove server version headers. Disable debug mode. Don't expose stack traces or database errors to end users.",
+        "severity_context": "LOW",
+        "owasp_category": "A01:2021 - Broken Access Control"
+    },
+    "CWE-287": {
+        "title": "Improper Authentication",
+        "plain_english": "Your application doesn't properly verify that a user is who they claim to be. This could mean weak password policies, missing multi-factor authentication, or flawed login logic.",
+        "impact": "Attackers can bypass authentication and access user accounts without valid credentials. This could lead to complete account takeover.",
+        "fix": "Implement strong password policies. Add multi-factor authentication. Use secure session management. Rate-limit login attempts to prevent brute-force attacks.",
+        "severity_context": "CRITICAL",
+        "owasp_category": "A07:2021 - Identification and Authentication Failures"
+    },
+    "CWE-502": {
+        "title": "Unsafe Deserialization",
+        "plain_english": "Your application processes data from untrusted sources without proper validation. An attacker can craft malicious data that, when processed, executes arbitrary code on your server.",
+        "impact": "Remote code execution — an attacker can take complete control of your server. This is one of the most severe vulnerability types.",
+        "fix": "Never deserialise data from untrusted sources. Use safe serialisation formats like JSON instead of pickle/Java serialisation. Implement integrity checks.",
+        "severity_context": "CRITICAL",
+        "owasp_category": "A08:2021 - Software and Data Integrity Failures"
+    },
+    "CWE-78": {
+        "title": "OS Command Injection",
+        "plain_english": "An attacker can inject operating system commands through your application's input fields. This lets them execute arbitrary commands on your server with the application's permissions.",
+        "impact": "Complete server compromise. Attackers can read/write any file, install malware, pivot to other systems on the network, or use your server as a launch point for further attacks.",
+        "fix": "Avoid calling OS commands with user-supplied input. If you must, use parameterised command execution (not shell=True). Whitelist allowed characters in inputs.",
+        "severity_context": "CRITICAL",
+        "owasp_category": "A03:2021 - Injection"
+    },
+    "CWE-306": {
+        "title": "Missing Authentication for Critical Function",
+        "plain_english": "A critical function in your application (like an admin panel or data export) can be accessed without requiring the user to log in first.",
+        "impact": "Unauthorised users can access administrative functions, modify system settings, export sensitive data, or perform other privileged operations.",
+        "fix": "Require authentication for all critical functions. Implement role-based access control (RBAC). Verify authorisation on every request, not just at the UI level.",
+        "severity_context": "CRITICAL",
+        "owasp_category": "A07:2021 - Identification and Authentication Failures"
+    },
+    "CWE-611": {
+        "title": "XML External Entity (XXE) Injection",
+        "plain_english": "Your application processes XML input that can reference external resources. An attacker can exploit this to read files from your server, perform server-side request forgery, or cause denial of service.",
+        "impact": "Server-side file disclosure, internal network scanning, denial of service. In some cases, can lead to remote code execution.",
+        "fix": "Disable external entity processing in your XML parser. Use less complex data formats like JSON when possible. Validate and sanitise all XML input.",
+        "severity_context": "HIGH",
+        "owasp_category": "A05:2021 - Security Misconfiguration"
+    },
+    "CWE-16": {
+        "title": "Configuration Vulnerability",
+        "plain_english": "Your application or server has insecure configuration settings. This could mean default passwords, unnecessary services enabled, or missing security headers.",
+        "impact": "Depends on the misconfiguration — ranges from information disclosure to complete system compromise. Default credentials are a common entry point for attackers.",
+        "fix": "Review all configuration settings against security best practices. Change default passwords. Disable unnecessary services. Apply security hardening guides.",
+        "severity_context": "MEDIUM",
+        "owasp_category": "A05:2021 - Security Misconfiguration"
+    },
+    "CWE-614": {
+        "title": "Sensitive Cookie Without 'Secure' Flag",
+        "plain_english": "Your application sets sensitive cookies (like session IDs) without the 'Secure' flag, meaning they can be sent over unencrypted HTTP connections where attackers could intercept them.",
+        "impact": "Session hijacking via network sniffing. An attacker on the same network (e.g., public Wi-Fi) could steal session cookies and take over user accounts.",
+        "fix": "Set the 'Secure' flag on all sensitive cookies. This ensures they are only sent over HTTPS connections. Also consider setting HttpOnly and SameSite attributes.",
+        "severity_context": "MEDIUM",
+        "owasp_category": "A05:2021 - Security Misconfiguration"
+    },
+    "CWE-693": {
+        "title": "Protection Mechanism Failure",
+        "plain_english": "The application does not use or incorrectly uses a protection mechanism that provides sufficient defense against directed attacks against the product.",
+        "impact": "Attackers can bypass intended security protections, increasing the likelihood of successful exploits like XSS or clickjacking.",
+        "fix": "Ensure that the application properly utilizes all necessary security mechanisms, such as Content Security Policy (CSP), anti-CSRF tokens, and security headers.",
+        "severity_context": "MEDIUM",
+        "owasp_category": "A05:2021 - Security Misconfiguration"
+    },
+    "CWE-264": {
+        "title": "Permissions, Privileges, and Access Controls",
+        "plain_english": "The software does not properly restrict access to resources, allowing users to perform actions they should not be allowed to perform.",
+        "impact": "Unauthorized access to sensitive data or functionality. This can lead to privilege escalation or data breaches.",
+        "fix": "Implement strict access controls, ensuring users can only access data and functions appropriate to their role.",
+        "severity_context": "HIGH",
+        "owasp_category": "A01:2021 - Broken Access Control"
+    },
+    "CWE-319": {
+        "title": "Cleartext Transmission of Sensitive Information",
+        "plain_english": "The software transmits sensitive or critical information in cleartext in a communication channel that can be intercepted.",
+        "impact": "Sensitive data (like passwords or session IDs) can be intercepted by attackers monitoring the network traffic.",
+        "fix": "Use strong encryption (like HTTPS/TLS) for all communications transmitting sensitive data.",
+        "severity_context": "HIGH",
+        "owasp_category": "A02:2021 - Cryptographic Failures"
+    },
+    "CWE-497": {
+        "title": "Exposure of Sensitive System Information",
+        "plain_english": "The software exposes sensitive system information, such as file paths, environment variables, or detailed error messages.",
+        "impact": "Attackers can gather intelligence about the system's architecture, making it easier to craft targeted attacks.",
+        "fix": "Configure the application to suppress detailed error messages and sensitive system information in production environments.",
+        "severity_context": "LOW",
+        "owasp_category": "A05:2021 - Security Misconfiguration"
+    }
+}

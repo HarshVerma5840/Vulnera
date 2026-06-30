@@ -1,0 +1,49 @@
+{
+  "e-commerce": {
+    "description": "Online stores, shopping carts, payment gateways",
+    "multipliers": {
+      "cart|checkout|payment|billing|order|invoice": 1.2,
+      "product|catalog|category": 0.9,
+      "admin|dashboard|settings": 1.15
+    }
+  },
+  "banking": {
+    "description": "Financial institutions, fintech, wallets",
+    "multipliers": {
+      "transfer|transaction|balance|account|card|kyc|statement": 1.3,
+      "branch|atm|contact": 0.8,
+      "admin|dashboard|settings": 1.15
+    }
+  },
+  "saas": {
+    "description": "Software as a Service, multi-tenant apps",
+    "multipliers": {
+      "org|tenant|workspace|billing|subscription": 1.2,
+      "user|profile|settings": 1.1,
+      "admin|dashboard": 1.15
+    }
+  },
+  "healthcare": {
+    "description": "Medical records, patient portals, telehealth",
+    "multipliers": {
+      "patient|record|medical|prescription|appointment|history": 1.3,
+      "doctor|staff|directory": 1.0,
+      "admin|dashboard|settings": 1.15
+    }
+  },
+  "blog": {
+    "description": "Content management systems, personal sites",
+    "multipliers": {
+      "post|article|category|tag": 0.8,
+      "comment|reply": 0.9,
+      "admin|wp-admin|dashboard|author": 1.2
+    }
+  },
+  "docs": {
+    "description": "Documentation, knowledge bases, public FAQs",
+    "multipliers": {
+      ".*": 0.7,
+      "admin|edit|publish": 1.2
+    }
+  }
+}
