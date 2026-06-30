@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import threading
 import uuid
 import json
@@ -12,6 +14,14 @@ from database import session
 from database_models import VulneraScan
 
 app = FastAPI(title="Vulnera", version="1.0.0")
+
+# Serve frontend static files
+app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+
+# Serve UI
+@app.get("/ui")
+def ui():
+    return FileResponse("frontend/index.html")
 
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")

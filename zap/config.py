@@ -1,7 +1,7 @@
 import os
 
 # ZAP API Settings
-ZAP_API_KEY = os.getenv("ZAP_API_KEY", "u3n0kh8j5ic9h7qkenhirl3dgp")
+ZAP_API_KEY = os.getenv("ZAP_API_KEY", "5ueuakk9507bcasp8kduqmt1ri")
 ZAP_HOST = os.getenv("ZAP_HOST", "127.0.0.1")
 ZAP_PORT = os.getenv("ZAP_PORT", "8090")
 
