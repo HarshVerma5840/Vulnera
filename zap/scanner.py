@@ -26,7 +26,7 @@ DISABLED_PLUGINS = [
 SCAN_POLICY_NAME = "vulnera_optimized"
 
 class ZAPScanManager:
-    def __init__(self, target, api_key="", zap_host="127.0.0.1", zap_port="8080", nmap_fingerprint=""):
+    def __init__(self, target, api_key="", zap_host="127.0.0.1", zap_port="8090", nmap_fingerprint=""):
         self.target = target
         self.nmap_fingerprint = nmap_fingerprint.lower()
 
