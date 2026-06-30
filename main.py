@@ -10,8 +10,11 @@ import json
 import os
 from supabase import create_client, Client
 
+from pydantic import BaseModel
+from typing import List
+
 from database import session
-from database_models import VulneraScan
+from database_models import VulneraScan, CapturedEndpoint
 
 # Intelligence layer imports (Phase 0-3)
 from normaliser import normalise_all
@@ -38,6 +41,15 @@ app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 def ui():
     return FileResponse("frontend/index.html")
 
+class EndpointItem(BaseModel):
+    path: str
+    method: str
+
+class EndpointRequest(BaseModel):
+    scan_id: str
+    app_type: str
+    endpoints: List[EndpointItem]
+
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -53,6 +65,34 @@ def get_db():
 @app.get("/")
 def greet():
     return {"message": "Welcome to Vulnera", "version": "1.0.0"}
+
+# ============================================================================
+# ENDPOINT INGESTION API
+# ============================================================================
+
+@app.post("/api/endpoints")
+def receive_endpoints(
+    request: EndpointRequest,
+    db: Session = Depends(get_db)
+):
+
+    for endpoint in request.endpoints:
+
+        db.add(
+            CapturedEndpoint(
+                scan_id=request.scan_id,
+                path=endpoint.path,
+                method=endpoint.method
+            )
+        )
+
+    db.commit()
+
+    return {
+        "success": True,
+        "stored": len(request.endpoints)
+    }
+
 
 # ============================================================================
 # UNIFIED VULNERASCAN ENDPOINTS (Nmap + ZAP)

@@ -29,3 +29,11 @@ class VulneraScan(Base):
     completed_at = Column(DateTime, nullable=True)
     total_duration_seconds = Column(Float, nullable=True)
     report_path = Column(String, nullable=True)
+
+class CapturedEndpoint(Base):
+    __tablename__ = "captured_endpoints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    scan_id = Column(String, index=True)
+    path = Column(String)
+    method = Column(String)
