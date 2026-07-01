@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+/* ── shadcn CSS Variables — Gray Dark Theme ─────────────────── */
+@layer base {
+  :root {
+    --radius: 0.625rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@theme inline {
+  /* Dark gray/black theme */
+  --color-background: oklch(0.12 0 0);
+  --color-foreground: oklch(0.95 0 0);
+  --color-card: oklch(0.15 0 0);
+  --color-card-foreground: oklch(0.95 0 0);
+  --color-popover: oklch(0.15 0 0);
+  --color-popover-foreground: oklch(0.95 0 0);
+  
+  /* Primary buttons are white/light gray with dark text */
+  --color-primary: oklch(0.95 0 0);
+  --color-primary-foreground: oklch(0.1 0 0);
+  
+  /* Secondary/Muted are darker grays */
+  --color-secondary: oklch(0.22 0 0);
+  --color-secondary-foreground: oklch(0.9 0 0);
+  --color-muted: oklch(0.2 0 0);
+  --color-muted-foreground: oklch(0.65 0 0);
+  --color-accent: oklch(0.22 0 0);
+  --color-accent-foreground: oklch(0.95 0 0);
+  
+  --color-destructive: oklch(0.55 0.2 25);
+  --color-destructive-foreground: oklch(0.98 0 0);
+  
+  --color-border: oklch(0.25 0 0);
+  --color-input: oklch(0.2 0 0);
+  --color-ring: oklch(0.8 0 0);
+
+  /* Severity colors */
+  --color-severity-high: oklch(0.6 0.22 25);
+  --color-severity-medium: oklch(0.7 0.18 70);
+  --color-severity-low: oklch(0.65 0.18 250);
+  --color-severity-info: oklch(0.6 0.02 285);
+  --color-success: oklch(0.65 0.18 155);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ── Glassmorphism Card ───────────────────────────────────────── */
+.glass-card {
+  background: rgba(15, 10, 30, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: var(--radius);
+}
+
+.glass-card:hover {
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+/* ── Animations ───────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(139, 92, 246, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.6); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
