@@ -32,15 +32,6 @@ from report_generator import ReportGenerator
 report_generator = ReportGenerator()
 
 app = FastAPI(title="Vulnera", version="1.0.0")
-
-# Serve frontend static files
-app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
-
-# Serve UI
-@app.get("/ui")
-def ui():
-    return FileResponse("frontend/index.html")
-
 class EndpointItem(BaseModel):
     path: str
     method: str

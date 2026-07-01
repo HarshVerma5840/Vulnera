@@ -36,15 +36,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Static file serving ───────────────────────────────────────
+# ── Static file serving (Vite build output) ───────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+FRONTEND_DIST = os.path.join(BASE_DIR, "frontend", "dist")
 
-# ── Serve frontend SPA at /ui ─────────────────────────────────
+# Only mount if dist exists (i.e., production build has been done)
+if os.path.isdir(FRONTEND_DIST):
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
+
+# ── Serve SPA — catch-all for React Router ────────────────────
 @app.get("/ui", response_class=HTMLResponse, include_in_schema=False)
-def serve_frontend_page():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+@app.get("/login", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/signup", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/scan", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/history", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/report/{scan_id}", response_class=HTMLResponse, include_in_schema=False)
+def serve_frontend_spa(scan_id: str = None):
+    index_path = os.path.join(FRONTEND_DIST, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return HTMLResponse(content="<h1>Frontend not built. Run 'npm run build' in frontend/</h1>", status_code=404)
 
 # ── JWT Auth Config ────────────────────────────────────────────
 JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_hex(32))
