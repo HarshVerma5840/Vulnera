@@ -25,7 +25,13 @@ import jwt
 # ── Import the EXISTING app & helpers from main.py ─────────────
 from main import app, get_db, vulnerascan_status
 from database import session
-from database_models import VulneraScan, User
+from database_models import VulneraScan, User, Alert, Feedback, ModelCheckpoint
+
+# Phase 4 Imports
+from feedback_loop import FeedbackEngine
+from agent_reviewer import AgentReviewer
+feedback_engine = FeedbackEngine()
+agent_reviewer = AgentReviewer()
 
 # ── CORS (allow frontend to call API) ──────────────────────────
 app.add_middleware(
@@ -161,3 +167,134 @@ def get_scan_history(db: Session = Depends(get_db)):
         }
         for s in scans
     ]
+
+
+# ============================================================================
+# PHASE 4: AGENTIC FEEDBACK LOOP ENDPOINTS
+# ============================================================================
+
+@app.get("/api/alerts/{scan_id}")
+def get_scan_alerts(scan_id: str, db: Session = Depends(get_db)):
+    """Get persisted alerts for a given scan."""
+    alerts = db.query(Alert).filter(Alert.scan_id == scan_id).all()
+    # Return dicts matching the frontend expectations
+    return [
+        {
+            "alert_id": a.alert_id,
+            "scan_id": a.scan_id,
+            "source": a.source,
+            "type": a.type,
+            "risk_score": a.risk_score,
+            "risk_level": a.risk_level,
+            "cwe_id": a.cwe_id,
+            "path": a.path,
+            "confidence": a.confidence,
+            "evidence": a.evidence,
+            "plain_english": {
+                "title": a.plain_english_title,
+                "what": a.plain_english_description,
+                "impact": a.plain_english_impact,
+                "fix": a.plain_english_fix,
+            },
+            "feedback_verdict": a.feedback_verdict,
+            "feedback_flag": a.feedback_flag,
+            "tp_probability": a.tp_probability,
+            "raw": a.raw_data
+        } for a in alerts
+    ]
+
+@app.post("/api/feedback")
+def submit_feedback(request_body: dict, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Submit a TP/FP verdict for an alert."""
+    alert_id = request_body.get("alert_id")
+    verdict = request_body.get("verdict")
+    notes = request_body.get("notes", "")
+    app_type = request_body.get("app_type", "Unknown")
+    
+    if not alert_id or verdict not in ["TP", "FP"]:
+        raise HTTPException(status_code=400, detail="Invalid request")
+
+    # If the agent previously suggested a verdict, handle overrides
+    agent_verdict = request_body.get("agent_verdict")
+    if agent_verdict:
+        agent_reviewer.handle_override(
+            db=db,
+            alert_id=alert_id,
+            user_id=user["user_id"],
+            agent_verdict=agent_verdict,
+            human_verdict=verdict,
+            human_notes=notes,
+            app_type=app_type
+        )
+        
+    try:
+        result = feedback_engine.record_feedback(db, alert_id, verdict, user["user_id"], notes)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.get("/api/feedback/stats")
+def get_feedback_stats(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get user's feedback stats and model status."""
+    total_fb = db.query(Feedback).count()
+    user_fb = db.query(Feedback).filter(Feedback.user_id == user["user_id"]).count()
+    
+    last_ckpt = db.query(ModelCheckpoint).order_by(ModelCheckpoint.round.desc()).first()
+    model_status = {
+        "is_trained": feedback_engine.model is not None,
+        "total_feedback_events": total_fb,
+        "next_retrain_in": feedback_engine.RETRAIN_THRESHOLD - (total_fb % feedback_engine.RETRAIN_THRESHOLD),
+        "latest_f1": last_ckpt.f1_accuracy if last_ckpt else None
+    }
+    
+    return {
+        "user_feedback_count": user_fb,
+        "model_status": model_status
+    }
+
+@app.get("/api/feedback/learning-curve")
+def get_learning_curve(db: Session = Depends(get_db)):
+    """Get model checkpoint history for chart plotting."""
+    return feedback_engine.generate_learning_curve(db)
+
+@app.post("/api/agent/review/{scan_id}")
+def batch_agent_review(scan_id: str, request_body: dict, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Trigger the Gemini agent to review all un-reviewed alerts in a scan."""
+    app_type = request_body.get("app_type", "Unknown")
+    alerts = db.query(Alert).filter(Alert.scan_id == scan_id).all()
+    
+    # Format for agent_reviewer
+    alert_dicts = [{"alert_id": a.alert_id, "type": a.type, "cwe_id": a.cwe_id, 
+                   "path": a.path, "original_risk": a.original_risk, "risk_score": a.risk_score,
+                   "endpoint_score": a.endpoint_score, "evidence": a.evidence, "description": a.description} 
+                   for a in alerts if not a.feedback_verdict]
+                   
+    results = agent_reviewer.review_batch(db, alert_dicts, user["user_id"], app_type)
+    return results
+
+@app.post("/api/agent/review-single")
+def single_agent_review(request_body: dict, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Trigger the Gemini agent to review a single alert."""
+    alert_id = request_body.get("alert_id")
+    app_type = request_body.get("app_type", "Unknown")
+    
+    db_alert = db.query(Alert).filter(Alert.alert_id == alert_id).first()
+    if not db_alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+        
+    alert_dict = {
+        "alert_id": db_alert.alert_id, "type": db_alert.type, "cwe_id": db_alert.cwe_id, 
+        "path": db_alert.path, "original_risk": db_alert.original_risk, "risk_score": db_alert.risk_score,
+        "endpoint_score": db_alert.endpoint_score, "evidence": db_alert.evidence, "description": db_alert.description
+    }
+    
+    result = agent_reviewer.review_alert(db, alert_dict, user["user_id"], app_type)
+    return result
+
+@app.get("/api/agent/stats")
+def get_agent_stats(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get agent accuracy and memory size."""
+    patterns = agent_reviewer.user_memory.get_user_patterns(db, user["user_id"])
+    return {
+        "user_patterns": patterns
+    }

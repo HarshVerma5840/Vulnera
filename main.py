@@ -10,6 +10,8 @@ import json
 import os
 from supabase import create_client, Client
 
+from cwe_enricher import CWEEnricher
+from feedback_loop import FeedbackEngine
 from pydantic import BaseModel
 from typing import List
 
@@ -26,6 +28,8 @@ from cwe_lookup import CWELookup
 endpoint_scorer = EndpointScorer()
 risk_scorer = RiskScorer()
 cwe_lookup = CWELookup()
+cwe_enricher = CWEEnricher()
+feedback_engine = FeedbackEngine()
 
 # Report generator
 from report_generator import ReportGenerator
@@ -320,6 +324,9 @@ def start_vulnerascan(
             
             # Save each alert to the alerts table in the database
             for alert_data in scored_alerts:
+                tp_prob = feedback_engine.predict_tp_probability(alert_data)
+                alert_data["tp_probability"] = tp_prob
+
                 db_alert = Alert(
                     alert_id=alert_data.get("alert_id"),
                     scan_id=scan_id,
@@ -346,6 +353,7 @@ def start_vulnerascan(
                     evidence=alert_data.get("evidence"),
                     description=alert_data.get("description"),
                     solution=alert_data.get("solution"),
+                    tp_probability=alert_data.get("tp_probability"),
                     raw_data=alert_data.get("raw")
                 )
                 db_bg.add(db_alert)
