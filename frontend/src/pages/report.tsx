@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Clock, Globe, FileText, Download, Loader2,
-  Shield, AlertTriangle, Info, ChevronDown, ChevronUp, Zap,
-  Server
+  ArrowLeft, FileText, CheckCircle, Clock, Globe,
+  Server, Shield, Download, AlertTriangle, Zap,
+  ChevronDown, ChevronUp, Bot, Loader2, Info
 } from 'lucide-react';
 import { scanApi, type ScanStatus, type ScanResults, type ZapAlert, type ScoredAlert } from '@/lib/api';
 import { AppLayout } from '@/components/app-layout';
@@ -454,9 +454,13 @@ export default function ReportPage() {
                 <Download className="h-4 w-4" />
                 Download JSON Report
               </Button>
-              <Button onClick={handleDownloadPdf}>
+              <Button variant="outline" onClick={handleDownloadPdf}>
                 <FileText className="h-4 w-4" />
                 Download PDF Report
+              </Button>
+              <Button onClick={() => navigate(`/review/${scanId}`)} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Bot className="h-4 w-4 mr-2" />
+                Review with AI Agent
               </Button>
             </div>
           </>

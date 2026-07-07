@@ -151,4 +151,30 @@ export const scanApi = {
     api.get(`/vulnerascan/${scanId}/report`, { responseType: 'blob' }),
 };
 
+// ── Feedback & Agent (Phase 4) ────────────────────────────────
+export const feedbackApi = {
+  submit: (alertId: string, verdict: 'TP' | 'FP', notes: string, appType: string, agentVerdict?: string) =>
+    api.post('/feedback', { alert_id: alertId, verdict, notes, app_type: appType, agent_verdict: agentVerdict }),
+
+  stats: () =>
+    api.get('/feedback/stats'),
+
+  learningCurve: () =>
+    api.get('/feedback/learning-curve'),
+};
+
+export const agentApi = {
+  reviewBatch: (scanId: string, appType: string) =>
+    api.post(`/agent/review/${scanId}`, { app_type: appType }),
+
+  reviewSingle: (alertId: string, appType: string) =>
+    api.post('/agent/review-single', { alert_id: alertId, app_type: appType }),
+
+  stats: () =>
+    api.get('/agent/stats'),
+    
+  getAlerts: (scanId: string) =>
+    api.get(`/alerts/${scanId}`),
+};
+
 export default api;

@@ -10,11 +10,12 @@ import json
 import os
 from supabase import create_client, Client
 
+from feedback_loop import FeedbackEngine
 from pydantic import BaseModel
 from typing import List
 
 from database import session
-from database_models import VulneraScan, CapturedEndpoint
+from database_models import VulneraScan, CapturedEndpoint, Alert
 
 # Intelligence layer imports (Phase 0-3)
 from normaliser import normalise_all
@@ -26,6 +27,7 @@ from cwe_lookup import CWELookup
 endpoint_scorer = EndpointScorer()
 risk_scorer = RiskScorer()
 cwe_lookup = CWELookup()
+feedback_engine = FeedbackEngine()
 
 # Report generator
 from report_generator import ReportGenerator
@@ -317,6 +319,43 @@ def start_vulnerascan(
                     
             # Attach to final report
             vulnerascan_status[scan_id]["results"]["alerts"] = scored_alerts
+            
+            # Save each alert to the alerts table in the database
+            for alert_data in scored_alerts:
+                tp_prob = feedback_engine.predict_tp_probability(alert_data)
+                alert_data["tp_probability"] = tp_prob
+
+                db_alert = Alert(
+                    alert_id=alert_data.get("alert_id"),
+                    scan_id=scan_id,
+                    source=alert_data.get("source"),
+                    url=alert_data.get("url"),
+                    path=alert_data.get("path"),
+                    method=alert_data.get("method"),
+                    host=alert_data.get("host"),
+                    type=alert_data.get("type"),
+                    confidence=alert_data.get("confidence"),
+                    original_risk=alert_data.get("risk"),
+                    cve_id=alert_data.get("cve_id"),
+                    cwe_id=alert_data.get("cwe_id"),
+                    risk_score=alert_data.get("risk_score"),
+                    risk_level=alert_data.get("risk_level"),
+                    endpoint_score=alert_data.get("components", {}).get("endpoint_criticality"),
+                    cvss=alert_data.get("components", {}).get("cvss"),
+                    epss=alert_data.get("components", {}).get("epss"),
+                    amplification_factor=alert_data.get("components", {}).get("amplification", 1.0),
+                    plain_english_title=alert_data.get("plain_english", {}).get("title"),
+                    plain_english_description=alert_data.get("plain_english", {}).get("what"),
+                    plain_english_impact=alert_data.get("plain_english", {}).get("impact"),
+                    plain_english_fix=alert_data.get("plain_english", {}).get("fix"),
+                    evidence=alert_data.get("evidence"),
+                    description=alert_data.get("description"),
+                    solution=alert_data.get("solution"),
+                    tp_probability=alert_data.get("tp_probability"),
+                    raw_data=alert_data.get("raw")
+                )
+                db_bg.add(db_alert)
+            db_bg.commit()
 
             total_duration = time.time() - scan_start_time
             total_duration_rounded = round(total_duration, 2)

@@ -7,6 +7,7 @@ import SignupPage from '@/pages/signup';
 import ScanPage from '@/pages/scan';
 import HistoryPage from '@/pages/history';
 import ReportPage from '@/pages/report';
+import ReviewPage from '@/pages/review';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
           <Route path="/report/:scanId" element={<ProtectedRoute><ReportPage /></ProtectedRoute>} />
+          <Route path="/review/:scanId" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
 
           {/* Default redirect */}
           <Route path="*" element={<Navigate to="/scan" replace />} />
