@@ -10,7 +10,6 @@ import json
 import os
 from supabase import create_client, Client
 
-from cwe_enricher import CWEEnricher
 from feedback_loop import FeedbackEngine
 from pydantic import BaseModel
 from typing import List
@@ -28,7 +27,6 @@ from cwe_lookup import CWELookup
 endpoint_scorer = EndpointScorer()
 risk_scorer = RiskScorer()
 cwe_lookup = CWELookup()
-cwe_enricher = CWEEnricher()
 feedback_engine = FeedbackEngine()
 
 # Report generator
