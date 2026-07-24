@@ -45,5 +45,108 @@
       ".*": 0.7,
       "admin|edit|publish": 1.2
     }
+  },
+  "erp": {
+    "description": "Enterprise Resource Planning systems (SAP, Oracle, NetSuite, etc.)",
+    "multipliers": {
+      "payroll|gl|ledger|journal|ap|ar|reconcile|fiscal|budget": 1.35,
+      "procurement|purchase|vendor|supplier|rfq|po|contract": 1.3,
+      "inventory|warehouse|stock|shipment|fulfilment|bom": 1.2,
+      "module|sap|oracle|erp|netsuite|odoo": 1.2,
+      "report|audit|log|export": 1.15,
+      "admin|dashboard|settings|config": 1.15,
+      "help|faq|about|home": 0.7
+    }
+  },
+  "crm": {
+    "description": "Customer Relationship Management platforms (Salesforce, HubSpot, etc.)",
+    "multipliers": {
+      "lead|opportunity|deal|pipeline|prospect|quote|proposal": 1.2,
+      "contact|customer|account|company": 1.1,
+      "campaign|email|sequence|automation": 1.1,
+      "api|webhook|integration|token": 1.25,
+      "admin|dashboard|settings": 1.15,
+      "report|analytics|export": 1.1,
+      "public|about|pricing": 0.8
+    }
+  },
+  "hr": {
+    "description": "Human Resource Management systems, payroll, attendance",
+    "multipliers": {
+      "payroll|salary|compensation|bonus|tax|deduction": 1.35,
+      "employee|staff|personnel|roster|headcount": 1.2,
+      "leave|attendance|timesheet|shift|schedule": 1.2,
+      "recruit|hire|applicant|onboard|offboard|termination": 1.25,
+      "performance|appraisal|review|kpi|goal": 1.1,
+      "document|contract|offer|nda": 1.2,
+      "admin|dashboard|settings": 1.15,
+      "directory|org|chart": 0.9,
+      "help|faq|policy": 0.7
+    }
+  },
+  "government": {
+    "description": "Government portals, tax systems, citizen services",
+    "multipliers": {
+      "tax|revenue|filing|return|assessment|penalty|refund": 1.35,
+      "citizen|identity|national|aadhaar|ssn|id|passport": 1.4,
+      "permit|license|registration|application|approval": 1.25,
+      "compliance|regulation|audit|enforcement|violation": 1.3,
+      "election|vote|ballot|census": 1.3,
+      "admin|dashboard|portal|settings": 1.15,
+      "public|about|news|notice|faq": 0.7,
+      "static|media|download": 0.6
+    }
+  },
+  "education": {
+    "description": "LMS, student portals, universities, e-learning platforms",
+    "multipliers": {
+      "student|learner|enrollment|admission|applicant": 1.2,
+      "grade|result|transcript|certificate|degree|gpa": 1.3,
+      "exam|quiz|assignment|submission|plagiarism": 1.2,
+      "course|curriculum|syllabus|module|lesson": 0.9,
+      "faculty|instructor|teacher|staff": 1.1,
+      "payment|fee|scholarship|financial": 1.25,
+      "admin|dashboard|settings|lms": 1.15,
+      "library|resource|public|about|blog": 0.7
+    }
+  },
+  "logistics": {
+    "description": "Supply chain, freight, courier, warehouse management",
+    "multipliers": {
+      "shipment|tracking|manifest|waybill|consignment|freight": 1.2,
+      "warehouse|stock|inventory|bin|pallet|location": 1.2,
+      "route|dispatch|driver|vehicle|fleet|gps": 1.15,
+      "customs|clearance|duty|tariff|export|import": 1.25,
+      "order|purchase|supplier|vendor|pod": 1.2,
+      "api|webhook|integration|edi": 1.2,
+      "admin|dashboard|settings": 1.15,
+      "public|about|contact|faq": 0.7
+    }
+  },
+  "social": {
+    "description": "Social media, community platforms, forums",
+    "multipliers": {
+      "message|dm|inbox|chat|conversation": 1.25,
+      "post|feed|timeline|story|reel|content": 0.9,
+      "follow|friend|connection|block|report": 1.0,
+      "account|profile|privacy|settings|password": 1.2,
+      "api|graph|token|oauth|webhook": 1.3,
+      "notification|activity|event": 0.9,
+      "admin|moderation|ban|dashboard": 1.2,
+      "public|explore|trending|hashtag": 0.6
+    }
+  },
+  "travel": {
+    "description": "Travel booking, hotels, airlines, hospitality",
+    "multipliers": {
+      "booking|reservation|itinerary|pnr|ticket|confirmation": 1.25,
+      "payment|billing|refund|cancel|charge": 1.3,
+      "checkin|checkout|boarding|passport|visa": 1.2,
+      "customer|guest|loyalty|reward|mileage": 1.1,
+      "api|partner|integration|channel": 1.2,
+      "admin|dashboard|settings": 1.15,
+      "search|explore|destination|hotel|flight": 0.8,
+      "about|contact|faq|help": 0.6
+    }
   }
 }

@@ -2,6 +2,7 @@ import json
 import numpy as np
 from sqlalchemy.orm import Session
 from database_models import UserMemory as DBUserMemory
+from cache_manager import cache
 
 try:
     from sentence_transformers import SentenceTransformer
@@ -68,6 +69,7 @@ class UserMemory:
         )
         db.add(memory)
         db.commit()
+        cache.delete(f"vulnera:user_patterns:{user_id}")
         return memory.id
 
     def retrieve_similar(self, db: Session, user_id: int, alert: dict, app_type: str = "Unknown", top_k=5) -> list:
@@ -109,6 +111,11 @@ class UserMemory:
         """
         Summarize this user's overall patterns.
         """
+        cache_key = f"vulnera:user_patterns:{user_id}"
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+            
         memories = db.query(DBUserMemory).filter(DBUserMemory.user_id == user_id).all()
         
         total = len(memories)
@@ -122,11 +129,12 @@ class UserMemory:
                 
         sorted_fps = sorted(fp_types.items(), key=lambda x: x[1], reverse=True)
         
-        return {
+        result = {
             "total_overrides": total,
             "common_fp_types": [item[0] for item in sorted_fps[:3]]
         }
-
+        cache.set(cache_key, result, ttl_seconds=300)
+        return result
     def build_priority_prompt(self, db: Session, user_id: int, alert: dict, app_type: str = "Unknown") -> str:
         """
         Build the priority context block for the LLM prompt.
