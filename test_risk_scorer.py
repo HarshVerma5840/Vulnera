@@ -13,6 +13,7 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, os.path.dirname(__file__))
 
 from risk_scorer import RiskScorer
+from cache_manager import cache
 
 class TestRiskScorer(unittest.TestCase):
     
@@ -39,7 +40,7 @@ class TestRiskScorer(unittest.TestCase):
         mock_get.return_value = mock_response
         
         # Test clear cache so we hit the mock
-        self.scorer.fetch_cvss.cache_clear()
+        cache.clear_prefix("cvss")
         
         score = self.scorer.fetch_cvss("CVE-2021-44228")
         self.assertEqual(score, 0.98)
@@ -63,7 +64,7 @@ class TestRiskScorer(unittest.TestCase):
         }
         mock_get.return_value = mock_response
         
-        self.scorer.fetch_epss.cache_clear()
+        cache.clear_prefix("epss")
         
         score = self.scorer.fetch_epss("CVE-2021-44228")
         self.assertEqual(score, 0.9523)

@@ -11,7 +11,7 @@ Calculates a comprehensive 0.0-1.0 risk score by combining:
 
 import os
 import requests
-from functools import lru_cache
+from cache_manager import redis_cache
 
 class RiskScorer:
     """
@@ -62,9 +62,8 @@ class RiskScorer:
     def __init__(self):
         self._endpoint_scorer = None  # Lazy loaded if needed
 
-    @staticmethod
-    @lru_cache(maxsize=512)
-    def fetch_cvss(cve_id: str) -> float:
+    @redis_cache(prefix="cvss", ttl=604800, cache_errors=False)
+    def fetch_cvss(self, cve_id: str) -> float:
         """
         Fetch CVSS v3.1 base score from NVD API.
         Returns normalised score (0.0-1.0) by dividing by 10.
@@ -116,9 +115,8 @@ class RiskScorer:
         except Exception:
             return 0.5
 
-    @staticmethod
-    @lru_cache(maxsize=512)
-    def fetch_epss(cve_id: str) -> float:
+    @redis_cache(prefix="epss", ttl=86400, cache_errors=False)
+    def fetch_epss(self, cve_id: str) -> float:
         """
         Fetch EPSS score (exploitation probability) from FIRST.org API.
         Returns 0.0-1.0 probability score.

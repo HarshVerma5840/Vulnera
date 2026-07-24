@@ -1,6 +1,7 @@
 import os
 import json
 import google.generativeai as genai
+from cache_manager import redis_cache
 
 class LLMAdapter:
     """Wraps Google Gemini API with basic retry/parsing logic."""
@@ -16,6 +17,7 @@ class LLMAdapter:
             # gemini-2.0-flash is the latest fast free-tier model
             self.model = genai.GenerativeModel('gemini-2.5-flash')
 
+    @redis_cache(prefix="llm_text", ttl=21600, cache_errors=False)
     def generate(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
         """Send a prompt and get a text response."""
         if not self.model:
@@ -35,6 +37,7 @@ class LLMAdapter:
             print(f"[!] Error calling Gemini API: {e}")
             return ""
 
+    @redis_cache(prefix="llm_json", ttl=21600, cache_errors=False)
     def generate_json(self, system_prompt: str, user_prompt: str) -> dict:
         """Send a prompt and parse structured JSON response."""
         if not self.model:
