@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from datetime import datetime
 from database_models import GlobalMemoryStats
+from cache_manager import cache
 
 class GlobalMemory:
     """
@@ -56,10 +57,19 @@ class GlobalMemory:
         stat.last_updated = datetime.utcnow()
         db.commit()
 
+        # Invalidate cache for these keys
+        cache.delete(f"vulnera:consensus:{cwe_id}:{alert_type}:{app_type}")
+        cache.delete(f"vulnera:top_fps:{app_type}")
+
     def get_consensus(self, db: Session, cwe_id: str, alert_type: str, app_type: str = "Unknown") -> dict:
         """
         Determine what the community thinks about this type of alert.
         """
+        cache_key = f"vulnera:consensus:{cwe_id}:{alert_type}:{app_type}"
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+
         stat = db.query(GlobalMemoryStats).filter(
             GlobalMemoryStats.cwe_id == cwe_id,
             GlobalMemoryStats.alert_type == alert_type,
@@ -88,7 +98,7 @@ class GlobalMemory:
         elif stat.total_reviews >= 10:
             confidence = "MEDIUM"
 
-        return {
+        result = {
             "consensus": consensus,
             "confidence": confidence,
             "tp_rate": stat.tp_rate,
@@ -97,18 +107,28 @@ class GlobalMemory:
             "avg_tp_score": stat.avg_risk_score_tp,
             "avg_fp_score": stat.avg_risk_score_fp
         }
+        
+        cache.set(cache_key, result, ttl_seconds=300)
+        return result
 
     def get_top_fp_patterns(self, db: Session, app_type: str = "Unknown", limit=5) -> list:
         """
         What are the most commonly false-positive alert types for this app type?
         """
+        cache_key = f"vulnera:top_fps:{app_type}"
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+
         stats = db.query(GlobalMemoryStats).filter(
             GlobalMemoryStats.app_type == app_type,
             GlobalMemoryStats.total_reviews >= 5,
             GlobalMemoryStats.tp_rate <= 0.4
         ).order_by(GlobalMemoryStats.tp_rate.asc()).limit(limit).all()
         
-        return [s.alert_type for s in stats]
+        result = [s.alert_type for s in stats]
+        cache.set(cache_key, result, ttl_seconds=300)
+        return result
 
     def build_community_prompt(self, db: Session, alert: dict, app_type: str = "Unknown") -> str:
         """
